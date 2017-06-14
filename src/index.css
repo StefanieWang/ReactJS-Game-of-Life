@@ -1,0 +1,59 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  background: radial-gradient(#00602d, #002712);
+  color: #e2e2e2;
+  font-family: 'Orbitron', sans-serif;
+}
+
+h1 {
+	text-align: center;
+	margin-bottom: 10px;
+}
+
+.control-panel {
+
+}
+canvas {
+	
+
+}
+
+
+.container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.control-panel {
+
+}
+
+.game-board {
+	padding: 0;
+	background: #4c4c4c;
+	border: 10px solid #4c4c4c;
+	border-radius: 8px;
+}
+
+button {
+	background: #000;
+	color: #e8e8e8;
+	border: 2px solid #d7d7d7;
+	border-radius: 5px;
+	padding: 4px 6px;
+	margin: 5px 0 5px 8px;
+}
+
+.count {
+	border: none;
+	width: 140px;
+	display: inline-block;
+	font-family: sans-serif;
+}
+
+/*button:active {
+	background: #7db87d;
+}*/
