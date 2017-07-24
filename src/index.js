@@ -83,13 +83,6 @@ CanvasGameBoard.propTypes = {
     addCells: PropTypes.func.isRequired
 }
 
-/*class ButtonGroups extends React.Component{
-
-    render(){
-        return <div></div>
-    }
-}*/
-
 class GamePanel extends React.Component {
 	constructor(){
 		super();
