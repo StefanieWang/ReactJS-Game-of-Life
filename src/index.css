@@ -54,6 +54,7 @@ button {
 	font-family: sans-serif;
 }
 
-/*button:active {
+.highlight {
 	background: #7db87d;
-}*/
+	color: #000;
+}

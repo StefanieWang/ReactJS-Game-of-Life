@@ -1,5 +1,8 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom';
+import PropTypes from 'prop-types';
+import $ from 'jquery';
 import './index.css';
 
 const drawAliveCell=(props)=>{
@@ -8,10 +11,6 @@ const drawAliveCell=(props)=>{
 }
 
 class CanvasGameBoard extends React.Component {
-	componentDidMount(){		   	
-		this.updateCanvas();
-	}
-
 	updateCanvas(){
 		const gridSize = 10;
 		const width = this.props.boardSize[0]*gridSize;
@@ -25,6 +24,7 @@ class CanvasGameBoard extends React.Component {
         	ctx.fillStyle = "#00b500";
         	drawAliveCell({ctx, cell, gridSize});
         });
+
         this.props.aliveNewCells.forEach((cell)=>{
         	ctx.fillStyle = "#7db87d";
         	drawAliveCell({ctx, cell, gridSize});
@@ -49,6 +49,10 @@ class CanvasGameBoard extends React.Component {
         
 	}
 
+    componentDidMount(){            
+        this.updateCanvas();
+    }
+
 	componentDidUpdate(){    	
 		this.updateCanvas();  
 	}
@@ -72,12 +76,20 @@ class CanvasGameBoard extends React.Component {
 	}
 }
 
-class ButtonGroups extends React.Component{
+CanvasGameBoard.propTypes = {
+    boardSize: PropTypes.array.isRequired,
+    aliveOldCells: PropTypes.array.isRequired,
+    aliveNewCells: PropTypes.array.isRequired,
+    addCells: PropTypes.func.isRequired
+}
+
+/*class ButtonGroups extends React.Component{
 
     render(){
         return <div></div>
     }
-}
+}*/
+
 class GamePanel extends React.Component {
 	constructor(){
 		super();
@@ -112,7 +124,7 @@ class GamePanel extends React.Component {
                             
         this.spaceships = [[340,60],[350,70],[350,80],[340,80],[330,80],
                             [430,200],[420,210],[420,220],[420,230],[430,230],[440,230],[450,230],[460,220],[460,200]];
-        /*this.random = this.getRandomCells(); */  
+        
         this.getRandomCells = this.getRandomCells.bind(this);                  
 		this.setBoardSize = this.setBoardSize.bind(this);
 		this.setSpeed = this.setSpeed.bind(this);
@@ -154,25 +166,20 @@ class GamePanel extends React.Component {
     }
 
     cellsEqual(cell1, cell2){
-    	if(cell1[0] === cell2[0] &&
-    		cell1[1] === cell2[1]){
-    		return true;
-    	}
-    	return false;
+    	return (cell1[0] === cell2[0] &&
+    		cell1[1] === cell2[1])
     }
 
     findAliveNeighbours(neighbourCells, aliveCells){
-        /*const aliveCells = this.state.aliveCells;*/
         const aliveNeighbourCells = neighbourCells.filter((neighbourCell) => {
-        	return !aliveCells.every((aliveCell) =>{return !this.cellsEqual(aliveCell, neighbourCell)});
+            return aliveCells.find((aliveCell) => this.cellsEqual(aliveCell, neighbourCell));
         })
         return aliveNeighbourCells;
     }
     
     findDeadNeighbours(neighbourCells, aliveCells){
-    	/*const aliveCells = this.state.aliveCells;*/
     	const deadNeighbourCells = neighbourCells.filter((neighbourCell) => {
-    		return aliveCells.every((aliveCell) =>{return !this.cellsEqual(aliveCell, neighbourCell)});
+            return !aliveCells.find((aliveCell) => this.cellsEqual(aliveCell, neighbourCell));
     	})
     	return deadNeighbourCells;
     }
@@ -190,20 +197,25 @@ class GamePanel extends React.Component {
 	    	const aliveNeighbourCells = this.findAliveNeighbours(neighbourCells, aliveCells);
 	    	
 	    	const deadNeighbourCells = this.findDeadNeighbours(neighbourCells, aliveCells);
+            //if the alive cell has 2-3 alive neighbours, it will still be 
+            //alive in next generation, otherwise it will die.
             if (aliveNeighbourCells.length < 2 ||
             	aliveNeighbourCells.length > 3){
             	indexOfCellWillDie.push(index);
             };
-            deadNeighbourCells.forEach((deadCell) => {
+            //if a dead cell has exactly 3 alive neighbours, it will come to life
+            // in next generation
+            deadNeighbourCells.filter((deadCell) => {
             	const neighboursOfDeadCell = this.findNeighbours(deadCell, gridSize);
             	const aliveNeighboursCells = this.findAliveNeighbours(neighboursOfDeadCell, aliveCells);
-            	if(aliveNeighboursCells.length === 3){
-            		if(cellsWillBorn.every((newCell) => {return !this.cellsEqual(newCell, deadCell)}))
-            		cellsWillBorn.push(deadCell);
+            	if(aliveNeighboursCells.length === 3 &&
+                 !cellsWillBorn.find((newCell) => this.cellsEqual(newCell, deadCell))){
+                    cellsWillBorn.push(deadCell);
             	}
             })
 	    })
-       
+        
+        // remove the cells will die
         aliveCells = aliveCells.filter((cell, index) => {
         	return !indexOfCellWillDie.includes(index);
         })
@@ -241,16 +253,10 @@ class GamePanel extends React.Component {
         let cellExist = false;
         let aliveNewCells = this.state.aliveNewCells;
         const aliveOldCells = this.state.aliveOldCells;
-        aliveNewCells.forEach((cell) =>{
-            if(this.cellsEqual(cell, newCell)){
-               cellExist = true;
-            }
-        });
-        aliveOldCells.forEach((cell) => {
-            if(this.cellsEqual(cell, newCell)){
-                cellExist = true;
-            }
-        });
+        const aliveCells = aliveOldCells.concat(aliveNewCells);
+
+        cellExist = aliveCells.find((cell) => this.cellsEqual(cell, newCell))
+ 
         if(!cellExist){
             aliveNewCells.push(newCell);
             this.setState({
@@ -260,11 +266,14 @@ class GamePanel extends React.Component {
                
     }
 
-   /* changeButtonColor(e){
-        e.target.style.background = "#7db87d"
-    }*/
+    highlightBtn(e, btnGroup){
+        $("."+btnGroup).removeClass("highlight");
+        const target = e.target;
+        $(target).addClass("highlight");
+    }
 
-    choosePattern(pattern){
+    choosePattern(e, pattern){
+        this.highlightBtn(e, "patternBtn");
         this.stopGameOfLife();
         this.generations = 0;
         this.populations = this.countPopulations([], pattern);
@@ -275,6 +284,7 @@ class GamePanel extends React.Component {
     }
 
 	setBoardSize(e, boardSize){
+        this.highlightBtn(e, "bdSizeBtn");
         this.stopGameOfLife();
         this.generations = 0;
         this.populations = 0;
@@ -285,17 +295,17 @@ class GamePanel extends React.Component {
 		})
 	}
 
-	setSpeed(simSpeed){
-       this.stopGameOfLife();
+	setSpeed(e, simSpeed){
+        this.highlightBtn(e, "speedBtn");
+        this.stopGameOfLife();
 		this.setState({
 			simSpeed: simSpeed
 		});
-        /* console.log(this.state.simSpeed);
-       this.runGameOfLife();*/
 
 	}
 
-    runGameOfLife(){
+    runGameOfLife(e=undefined){
+        if(e) { this.highlightBtn(e, "controlBtn") };
         this.stopGameOfLife();
         /*if(!this.timer){*/
             const simSpeed = this.state.simSpeed;
@@ -305,7 +315,8 @@ class GamePanel extends React.Component {
         
     }
     
-    stopGameOfLife(){
+    stopGameOfLife(e=undefined){
+        if(e) { this.highlightBtn(e, "controlBtn") };
         if(this.timer){
             clearTimeout(this.timer);
             this.timer = undefined;
@@ -313,14 +324,16 @@ class GamePanel extends React.Component {
         
     }
 
-    stepRun(){
+    stepRun(e){
+        this.highlightBtn(e, "controlBtn");
         this.stopGameOfLife();
         const simSpeed = this.state.simSpeed;
         const timer = setTimeout(this.updateCells.bind(this), simSpeed);
         this.timer = timer;
     }
 
-    clearBoard(){
+    clearBoard(e){
+        this.highlightBtn(e, "controlBtn");
         this.stopGameOfLife();
         this.generations = 0;
         this.populations = 0;
@@ -343,10 +356,10 @@ class GamePanel extends React.Component {
     		<div className="container">
                 <h1>Game of Life</h1>
 				<div className="control-panel">
-				    <button onClick = {this.runGameOfLife}>Run</button>
-				    <button onClick = {this.stopGameOfLife}>Pause</button>
-                    <button onClick = {this.stepRun}>Step</button>
-				    <button onClick = {this.clearBoard}>Clear</button>
+				    <button className = "controlBtn highlight" onClick = {(e) => this.runGameOfLife(e)}>Run</button>
+				    <button className = "controlBtn" onClick = {(e) => this.stopGameOfLife(e)}>Pause</button>
+                    <button className = "controlBtn" onClick = {(e) => this.stepRun(e)}>Step</button>
+				    <button className = "controlBtn" onClick = {(e) => this.clearBoard(e)}>Clear</button>
                 </div>
                 <div>
 		    		<div className="count">{"Generations: "+this.generations}</div>
@@ -354,7 +367,6 @@ class GamePanel extends React.Component {
 				</div>
 				<div className="game-board">
 					<CanvasGameBoard boardSize={this.state.boardSize}
-								simSpeed={this.state.simSpeed}
 								aliveOldCells={this.state.aliveOldCells} 
 								aliveNewCells={this.state.aliveNewCells}
                                 addCells={this.addCells}/>
@@ -362,28 +374,27 @@ class GamePanel extends React.Component {
                 <div className="footer-control-panel">
     				<div>
                         Board Size: 
-                        <button onClick = {(e) => this.setBoardSize(e,[50, 30])}>Size: 50×30</button>
-                        <button onClick = {(e) => this.setBoardSize(e,[70, 50])}>Size: 70×50</button>
-                        <button onClick = {(e) => this.setBoardSize(e,[100, 80])}>Size: 100×80</button>
+                        <button className="bdSizeBtn highlight" onClick = {(e) => this.setBoardSize(e,[50, 30])}>Size: 50×30</button>
+                        <button className="bdSizeBtn" onClick = {(e) => this.setBoardSize(e,[70, 50])}>Size: 70×50</button>
+                        <button className="bdSizeBtn" onClick = {(e) => this.setBoardSize(e,[100, 80])}>Size: 100×80</button>
                     </div>
                     <div>
                         Sim Speed <span style={{fontFamily: "sans-serif"}}>(press Run to start)</span> :  
-                        <button onClick = {() => this.setSpeed(500)}>Slow</button>
-                        <button onClick = {() => this.setSpeed(200)}>Medium</button>
-                        <button onClick = {() => this.setSpeed(100)}>Fast</button>
+                        <button className = "speedBtn" onClick = {(e) => this.setSpeed(e, 500)}>Slow</button>
+                        <button className = "speedBtn" onClick = {(e) => this.setSpeed(e, 200)}>Medium</button>
+                        <button className = "speedBtn highlight" onClick = {(e) => this.setSpeed(e, 100)}>Fast</button>
                     </div>
                     <div>
                         Choose Patterns: 
-                        <button onClick = {() => this.choosePattern(this.stillLifes)}>Still Lifes</button>
-                        <button onClick = {() => this.choosePattern(this.oscillator)}>Oscillators</button>
-                        <button onClick = {() => this.choosePattern(this.spaceships)}>Spaceships</button>
-                        <button onClick = {() => this.choosePattern(this.getRandomCells())}>Random</button>
+                        <button className = "patternBtn" onClick = {(e) => this.choosePattern(e, this.stillLifes)}>Still Lifes</button>
+                        <button className = "patternBtn" onClick = {(e) => this.choosePattern(e, this.oscillator)}>Oscillators</button>
+                        <button className = "patternBtn" onClick = {(e) => this.choosePattern(e, this.spaceships)}>Spaceships</button>
+                        <button className = "patternBtn" onClick = {(e) => this.choosePattern(e, this.getRandomCells())}>Random</button>
                     </div>
                 </div>
     		</div>
     		)
     }
-/*{<BoardSizeButtons chooseBoardSize={this.chooseBoardSize} />
-								<SimSpeedButtons chooseSpeed={this.chooseSpeed} />}*/
 }
+
 ReactDOM.render(<GamePanel />, document.getElementById('app'));
